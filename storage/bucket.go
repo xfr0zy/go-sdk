@@ -118,6 +118,9 @@ type FileInfo struct {
 
 	// 分拣分片信息，可能为空
 	Parts []int64 `json:"parts"`
+
+	// 增加云数据的返回
+	Metas map[string]string `json:"x-qn-meta"`
 }
 
 func (f *FileInfo) String() string {
@@ -479,13 +482,13 @@ func (m *BucketManager) Move(srcBucket, srcKey, destBucket, destKey string, forc
 }
 
 // ChangeMime 用来更新文件的MimeType
-func (m *BucketManager) ChangeMime(bucket, key, newMime string) (err error) {
+func (m *BucketManager) ChangeMime(bucket, key, newMime string, metas map[string]string) (err error) {
 	reqHost, reqErr := m.RsReqHost(bucket)
 	if reqErr != nil {
 		err = reqErr
 		return
 	}
-	reqURL := fmt.Sprintf("%s%s", reqHost, URIChangeMime(bucket, key, newMime))
+	reqURL := fmt.Sprintf("%s%s", reqHost, URIChangeMime(bucket, key, newMime, metas))
 	err = m.Client.CredentialedCall(context.Background(), m.Mac, auth.TokenQiniu, nil, "POST", reqURL, nil)
 	return
 }
@@ -872,9 +875,16 @@ func URIDeleteAfterDays(bucket, key string, days int) string {
 }
 
 // URIChangeMime 构建 chgm 接口的请求命令
-func URIChangeMime(bucket, key, newMime string) string {
-	return fmt.Sprintf("/chgm/%s/mime/%s", EncodedEntry(bucket, key),
+func URIChangeMime(bucket, key, newMime string, metas map[string]string) string {
+	//POST /chgm/<EncodedEntryURI>/mime/<EncodedMimeType>/x-qn-meta-<meta_key>/<EncodedMetaValue>/cond/<Encodedcond>
+	uri := fmt.Sprintf("/chgm/%s/mime/%s", EncodedEntry(bucket, key),
 		base64.URLEncoding.EncodeToString([]byte(newMime)))
+
+	for k, v := range metas {
+		uri += fmt.Sprintf("/x-qn-meta-%s/%s", k, base64.URLEncoding.EncodeToString([]byte(v)))
+	}
+
+	return uri
 }
 
 // URIChangeType 构建 chtype 接口的请求命令

@@ -34,7 +34,7 @@ func main() {
 	}
 	chgmOps := make([]string, 0, len(chgmKeys))
 	for key, newMime := range chgmKeys {
-		chgmOps = append(chgmOps, storage.URIChangeMime(bucket, key, newMime))
+		chgmOps = append(chgmOps, storage.URIChangeMime(bucket, key, newMime, nil))
 	}
 	rets, err := bucketManager.Batch(chgmOps)
 	if err != nil {
